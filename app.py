@@ -1,52 +1,64 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
+import requests
+import os
 import joblib
+import matplotlib.pyplot as plt
 
-# Page title
-st.title("Energy Consumption Forecast App")
-st.markdown("Using SARIMA to predict daily energy usage for 2025")
+# --- CONFIG ---
+MODEL_FILENAME = "sarima_model.pkl"
+MODEL_URL = "https://drive.google.com/uc?export=download&id=11DmISsLOTgUiJNLff42mIVTcWBaMu3MX"  
 
-# Load the trained SARIMA model
-@st.cache_resource
+# --- Download model if not present ---
+def download_model():
+    if not os.path.exists(MODEL_FILENAME):
+        st.info("Downloading SARIMA model from Google Drive...")
+        response = requests.get(MODEL_URL)
+        with open(MODEL_FILENAME, "wb") as f:
+            f.write(response.content)
+        st.success("Model downloaded successfully!")
+
+# --- Load the model ---
 def load_model():
-    return joblib.load("sarima_model.pkl")  # Model is in the root directory
+    with open(MODEL_FILENAME, "rb") as file:
+        model = joblib.load(file)
+    return model
 
-sarima_model = load_model()
+# --- App UI ---
+st.title("⚡ Energy Consumption Forecast")
 
-# User input: forecast duration
-forecast_days = st.slider("Select number of days to forecast", min_value=30, max_value=365, value=365, step=1)
+# Download and load model
+try:
+    download_model()
+    model = load_model()
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.stop()
 
-# Forecast future values
-future_predictions = sarima_model.forecast(steps=forecast_days)
+# --- User Inputs ---
+st.sidebar.header("🔧 Forecast Settings")
 
-# Create future dates
-future_dates = pd.date_range(start="2025-01-01", periods=forecast_days, freq="D")
-forecast_df = pd.DataFrame({
-    "Date": future_dates,
-    "Predicted Energy (kWh)": future_predictions
-})
+# Manual input for days and year
+num_days = st.sidebar.number_input("Enter number of days to forecast", min_value=1, max_value=365, value=30)
+target_year = st.sidebar.number_input("Enter forecast starting year", min_value=2020, max_value=2100, value=pd.Timestamp.today().year)
 
-# Plot forecast
-st.subheader("Forecast Plot")
-fig, ax = plt.subplots(figsize=(12, 5))
-ax.plot(forecast_df["Date"], forecast_df["Predicted Energy (kWh)"], color='blue', linestyle='--')
-ax.set_title(f"Energy Consumption Forecast ({forecast_days} days)")
-ax.set_xlabel("Date")
-ax.set_ylabel("Predicted Energy (kWh)")
-plt.xticks(rotation=45)
-plt.grid(True)
-st.pyplot(fig)
+# Generate forecast start date
+start_date = pd.Timestamp(f"{target_year}-01-01")
 
-# Show forecast table
-st.subheader("Forecast Data")
-st.dataframe(forecast_df)
+# --- Forecast ---
+st.subheader("📈 Forecasted Energy Consumption")
+try:
+    forecast = model.forecast(steps=num_days)
+    forecast_index = pd.date_range(start=start_date, periods=num_days, freq="D")
 
-# Export as CSV
-csv = forecast_df.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="📥 Download Forecast CSV",
-    data=csv,
-    file_name='energy_forecast_2025.csv',
-    mime='text/csv'
-)
+    # Combine forecast in DataFrame
+    forecast_df = pd.DataFrame({'Date': forecast_index, 'Forecast (kWh)': forecast})
+
+    # Plot
+    st.line_chart(forecast_df.set_index("Date"))
+    st.dataframe(forecast_df)
+
+except Exception as e:
+    st.error(f"Forecasting failed: {e}")
+
