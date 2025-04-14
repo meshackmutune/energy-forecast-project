@@ -19,8 +19,16 @@ def download_model():
             if response.status_code != 200:
                 st.error(f"Failed to download model. Status code: {response.status_code}")
                 st.stop()
+
             with open(MODEL_FILENAME, "wb") as f:
                 f.write(response.content)
+
+            # Check for incomplete download (Google Drive warning page returns HTML)
+            if os.path.getsize(MODEL_FILENAME) < 10_000:  # Adjust threshold as needed
+                st.error("Downloaded file seems incomplete. Please check the Google Drive link.")
+                os.remove(MODEL_FILENAME)
+                st.stop()
+
             st.success("Model downloaded successfully!")
         except Exception as e:
             st.error(f"Download failed: {e}")
@@ -62,25 +70,4 @@ try:
 
 except Exception as e:
     st.error(f"Forecasting failed: {e}")
-
-# --- Optional Historical Data Section ---
-st.subheader("📊 Historical + Forecast Comparison (Optional)")
-st.markdown("Upload historical data (CSV) to compare with the forecast.")
-
-uploaded_file = st.file_uploader("Upload historical CSV", type=["csv"])
-if uploaded_file is not None:
-    try:
-        hist_df = pd.read_csv(uploaded_file, parse_dates=["Date"])
-        hist_df = hist_df.rename(columns={hist_df.columns[1]: "Actual (kWh)"})
-        combined_df = pd.concat([
-            hist_df.set_index("Date"),
-            forecast_df.set_index("Date")
-        ], axis=1)
-
-        # Plot combined
-        st.line_chart(combined_df)
-        st.dataframe(combined_df.reset_index())
-
-    except Exception as e:
-        st.error(f"Error processing historical file: {e}")
 
