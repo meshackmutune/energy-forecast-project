@@ -3,3 +3,4 @@ matplotlib
 joblib
 streamlit
 scikit-learn
+requests
