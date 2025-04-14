@@ -1,44 +1,43 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
 import os
 import joblib
+import gdown
 import matplotlib.pyplot as plt
 
 # --- CONFIG ---
 MODEL_FILENAME = "sarima_model.pkl"
-MODEL_URL = "https://drive.google.com/uc?export=download&id=11DmISsLOTgUiJNLff42mIVTcWBaMu3MX"
+MODEL_URL = "https://drive.google.com/uc?id=11DmISsLOTgUiJNLff42mIVTcWBaMu3MX"  # Using gdown link format
 
-# --- Download model from Google Drive ---
+# --- Download model from Google Drive using gdown ---
 def download_model():
     if not os.path.exists(MODEL_FILENAME):
         st.info("Downloading SARIMA model from Google Drive...")
         try:
-            response = requests.get(MODEL_URL)
-            if response.status_code != 200:
-                st.error(f"Failed to download model. Status code: {response.status_code}")
+            # Use gdown to download the model
+            gdown.download(MODEL_URL, MODEL_FILENAME, quiet=False)
+
+            # Check if the model file was downloaded successfully
+            if os.path.exists(MODEL_FILENAME):
+                st.success("Model downloaded successfully!")
+            else:
+                st.error("Model file was not downloaded correctly.")
                 st.stop()
 
-            with open(MODEL_FILENAME, "wb") as f:
-                f.write(response.content)
-
-            # Check for incomplete download (Google Drive warning page returns HTML)
-            if os.path.getsize(MODEL_FILENAME) < 10_000:  # Adjust threshold as needed
-                st.error("Downloaded file seems incomplete. Please check the Google Drive link.")
-                os.remove(MODEL_FILENAME)
-                st.stop()
-
-            st.success("Model downloaded successfully!")
         except Exception as e:
             st.error(f"Download failed: {e}")
             st.stop()
 
 # --- Load the model ---
 def load_model():
-    with open(MODEL_FILENAME, "rb") as file:
-        model = joblib.load(file)
-    return model
+    try:
+        with open(MODEL_FILENAME, "rb") as file:
+            model = joblib.load(file)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()
 
 # --- App UI ---
 st.title("⚡ Energy Consumption Forecast")
