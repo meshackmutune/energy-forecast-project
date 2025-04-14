@@ -3,4 +3,5 @@ matplotlib
 joblib
 streamlit
 scikit-learn
+statsmodels
 gdown
