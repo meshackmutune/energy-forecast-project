@@ -23,14 +23,18 @@ def download_model():
 
 # --- Load the model ---
 def load_model():
-    with open(MODEL_FILENAME, "rb") as file:
-        model = joblib.load(file)
-    return model
+    try:
+        with open(MODEL_FILENAME, "rb") as file:
+            model = joblib.load(file)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()
 
 # --- App UI ---
 st.title("⚡ Energy Consumption Forecast")
 
-# Download & load model
+# Download & load model if not already done
 try:
     download_model()
     model = load_model()
@@ -44,17 +48,28 @@ num_days = st.sidebar.number_input("Number of days to forecast", min_value=1, ma
 target_year = st.sidebar.number_input("Forecast start year", min_value=2020, max_value=2100, value=pd.Timestamp.today().year)
 start_date = pd.Timestamp(f"{target_year}-01-01")
 
-# --- Forecast ---
-st.subheader("📈 Forecasted Energy Consumption")
-try:
-    forecast = model.forecast(steps=num_days)
-    forecast_index = pd.date_range(start=start_date, periods=num_days, freq="D")
-    forecast_df = pd.DataFrame({"Date": forecast_index, "Forecast (kWh)": forecast})
-    
-    # Plot forecast
-    st.line_chart(forecast_df.set_index("Date"))
-    st.dataframe(forecast_df)
+# --- Button to trigger forecasting ---
+load_button = st.sidebar.button("Generate Forecast")
 
-except Exception as e:
-    st.error(f"Forecasting failed: {e}")
+if load_button:
+    # --- Forecast ---
+    st.subheader("📈 Forecasted Energy Consumption")
+    try:
+        forecast = model.forecast(steps=num_days)
+        forecast_index = pd.date_range(start=start_date, periods=num_days, freq="D")
+        forecast_df = pd.DataFrame({"Date": forecast_index, "Forecast (kWh)": forecast})
+        
+        # Plot the forecast with custom scale and labels for better visibility
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(forecast_df["Date"], forecast_df["Forecast (kWh)"], marker='o', color='b', label="Forecast")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Energy Consumption (kWh)")
+        ax.set_title("Forecasted Energy Consumption")
+        ax.grid(True)
+        st.pyplot(fig)
+        
+        # Display forecasted data
+        st.dataframe(forecast_df)
 
+    except Exception as e:
+        st.error(f"Forecasting failed: {e}")
