@@ -1,43 +1,31 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import gdown
 import os
 import joblib
-import gdown
 import matplotlib.pyplot as plt
 
 # --- CONFIG ---
 MODEL_FILENAME = "sarima_model.pkl"
-MODEL_URL = "https://drive.google.com/uc?id=11DmISsLOTgUiJNLff42mIVTcWBaMu3MX"  # Using gdown link format
+MODEL_URL = "https://drive.google.com/uc?id=11DmISsLOTgUiJNLff42mIVTcWBaMu3MX"
 
-# --- Download model from Google Drive using gdown ---
+# --- Download model from Google Drive ---
 def download_model():
     if not os.path.exists(MODEL_FILENAME):
         st.info("Downloading SARIMA model from Google Drive...")
         try:
-            # Use gdown to download the model
-            gdown.download(MODEL_URL, MODEL_FILENAME, quiet=False)
-
-            # Check if the model file was downloaded successfully
-            if os.path.exists(MODEL_FILENAME):
-                st.success("Model downloaded successfully!")
-            else:
-                st.error("Model file was not downloaded correctly.")
-                st.stop()
-
+            gdown.download(MODEL_URL, MODEL_FILENAME, quiet=False)  # Download model using gdown
+            st.success("Model downloaded successfully!")
         except Exception as e:
             st.error(f"Download failed: {e}")
             st.stop()
 
 # --- Load the model ---
 def load_model():
-    try:
-        with open(MODEL_FILENAME, "rb") as file:
-            model = joblib.load(file)
-        return model
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()
+    with open(MODEL_FILENAME, "rb") as file:
+        model = joblib.load(file)
+    return model
 
 # --- App UI ---
 st.title("⚡ Energy Consumption Forecast")
