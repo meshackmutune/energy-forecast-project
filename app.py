@@ -61,7 +61,7 @@ if load_button:
         
         # Plot the forecast with custom scale and labels for better visibility
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(forecast_df["Date"], forecast_df["Forecast (kWh)"], marker='o', color='b', label="Forecast")
+        ax.plot(forecast_df["Date"], forecast_df["Forecast (kWh)"], marker='o', color='green', label="Forecast")
         ax.set_xlabel("Date")
         ax.set_ylabel("Energy Consumption (kWh)")
         ax.set_title("Forecasted Energy Consumption")
